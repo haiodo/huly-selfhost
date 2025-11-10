@@ -22,7 +22,7 @@ spec:
                   name: huly-config
                   key: ACCOUNTS_URL
             - name: ACCOUNT_PORT
-              value: '3000'
+              value: "3000"
             - name: FRONT_URL
               valueFrom:
                 configMapKeyRef:
@@ -36,7 +36,7 @@ spec:
                   name: huly-secret
                   key: STORAGE_CONFIG
             - name: MODEL_ENABLED
-              value: '*'
+              value: "*"
             - name: DB_URL
               valueFrom:
                 secretKeyRef:
@@ -59,7 +59,7 @@ spec:
                   key: TRANSACTOR_URL
             - name: QUEUE_CONFIG
               value: redpanda:9092
-          image: hardcoreeng/account:v0.7.242
+          image: haiodo/account:v0.7.300
           name: account
           ports:
             - containerPort: 3000

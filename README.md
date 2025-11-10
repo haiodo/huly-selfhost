@@ -1,26 +1,10 @@
 # Huly Self-Hosted
 
-Please use this README if you want to deploy Huly on your server with `docker compose`. I'm using a Basic Droplet on Digital Ocean with Ubuntu 24.04, but these instructions can be easily adapted for any Linux distribution.
-
-> [!NOTE]
-> Huly is quite resource-heavy, so I recommend using a Droplet with 2 vCPUs and 4GB of RAM. Droplets with less RAM may
-> stop responding or fail.
+Please use this README if you want to deploy Huly on your server with `docker compose`.
 
 If you prefer Kubernetes deployment, there is a sample Kubernetes configuration under [kube](kube) directory.
 
-## Installing `nginx` and `docker`
-
-First, update repositories cache:
-
-```bash
-sudo apt update
-```
-
-Now, install `nginx`:
-
-```bash
-sudo apt install nginx
-```
+## Docker based deployment
 
 Install docker using the [recommended method](https://docs.docker.com/engine/install/ubuntu/) from docker website.
 Afterwards perform [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/). Pay attention to 3rd step with `newgrp docker` command, it needed for correct execution in setup script.
@@ -30,7 +14,7 @@ Afterwards perform [post-installation steps](https://docs.docker.com/engine/inst
 Next, let's clone the `huly-selfhost` repository and configure Huly.
 
 ```bash
-git clone https://github.com/hcengineering/huly-selfhost.git
+git clone https://github.com/haiodo/huly-selfhost.git
 cd huly-selfhost
 ./setup.sh
 ```
@@ -62,17 +46,19 @@ sudo docker compose up -d
 Now, launch your web browser and enjoy Huly!
 
 > [!IMPORTANT]
-> Provided configrations include deployments of CockroachDB and Redpanda which might not be production-ready. Please inspect them carefully before using in production. For more information on the recommended deployment configurations, please refer to the [CockroachDB](https://www.cockroachlabs.com/docs/stable/recommended-production-settings) and [Redpanda](https://docs.redpanda.com/24.3/deploy/) documentation.
+> Provided configrations include deployments of CockroachDB and Redpanda which might not be production-ready.
+> Please inspect them carefully before using in production. For more information on the recommended deployment configurations, please refer to the [CockroachDB](https://www.cockroachlabs.com/docs/stable/recommended-production-settings) and [Redpanda](https://docs.redpanda.com/24.3/deploy/) documentation.
 
 ## Volume Configuration
 
-By default, Huly uses Docker named volumes to store persistent data (database, Elasticsearch indices, and uploaded files). You can optionally configure custom host paths for these volumes during the setup process.
+By default, Huly uses Docker named volumes to store persistent data (database, Elasticsearch indices, and uploaded files).
+You can optionally configure custom host paths for these volumes during the setup process.
 
 ### During Setup
 
 When running `./setup.sh`, you'll be prompted to specify custom paths for:
 
-- **Elasticsearch volume**: Search index data storage  
+- **Elasticsearch volume**: Search index data storage
 - **Files volume**: User-uploaded files and attachments
 - **CockroachDB data volume**: Data storage for workspaces and accounts
 - **CockroachDB certs volume**: Certificates for CockroachDB
@@ -211,7 +197,7 @@ Add the `ses` container to your `docker-compose.yaml` file with the generated VA
 
 ```yaml
 ses:
-  image: hardcoreeng/ses:${HULY_VERSION}
+  image: haiodo/ses:${HULY_VERSION}
   environment:
     - PORT=3335
     - SOURCE=mail@example.com
@@ -234,7 +220,7 @@ The Mail Service is responsible for sending email notifications and confirmation
 
     ```yaml
     mail:
-      image: hardcoreeng/mail:${HULY_VERSION}
+      image: haiodo/mail:${HULY_VERSION}
       container_name: mail
       ports:
         - 8097:8097
@@ -361,7 +347,7 @@ self-hosted Huly, perform the following steps:
 
     ```yaml
       love:
-        image: hardcoreeng/love:${HULY_VERSION}
+        image: haiodo/love:${HULY_VERSION}
         container_name: love
         ports:
           - 8096:8096
@@ -396,7 +382,7 @@ self-hosted Huly, perform the following steps:
 
     ```yaml
       print:
-        image: hardcoreeng/print:${HULY_VERSION}
+        image: haiodo/print:${HULY_VERSION}
         container_name: print
         ports:
           - 4005:4005
@@ -434,7 +420,7 @@ Huly provides AI-powered chatbot that provides several services:
 
     ```yaml
       aibot:
-        image: hardcoreeng/ai-bot:${HULY_VERSION}
+        image: haiodo/ai-bot:${HULY_VERSION}
         ports:
           - 4010:4010
         environment:
@@ -496,7 +482,7 @@ Add `calendar` container to the docker-compose.yaml
 
 ```yaml
   calendar:
-    image: hardcoreeng/calendar:${HULY_VERSION}
+    image: haiodo/calendar:${HULY_VERSION}
     ports:
       - 8095:8095
     environment:
@@ -642,7 +628,7 @@ Enable the following event subscriptions:
 
 ```yaml
 github:
-  image: hardcoreeng/github:${HULY_VERSION}
+  image: haiodo/github:${HULY_VERSION}
   ports:
     - 3500:3500
   environment:

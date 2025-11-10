@@ -39,14 +39,23 @@ services:
       - --mode dev-container
       - --smp 1
       - --default-log-level=info
-    container_name: redpanda
     volumes:
       - ${VOLUME_REDPANDA_PATH:-redpanda}:/var/lib/redpanda/data
     environment:
       - REDPANDA_SUPERUSER_USERNAME=${REDPANDA_ADMIN_USER}
       - REDPANDA_SUPERUSER_PASSWORD=${REDPANDA_ADMIN_PWD}
     healthcheck:
-      test: ['CMD', 'rpk', 'cluster', 'info', '-X', 'user=${REDPANDA_ADMIN_USER}', '-X', 'pass=${REDPANDA_ADMIN_PWD}']
+      test:
+        [
+          "CMD",
+          "rpk",
+          "cluster",
+          "info",
+          "-X",
+          "user=${REDPANDA_ADMIN_USER}",
+          "-X",
+          "pass=${REDPANDA_ADMIN_PWD}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -59,7 +68,7 @@ services:
     volumes:
       - ${VOLUME_FILES_PATH:-files}:/data
     healthcheck:
-      test: ['CMD', 'mc', 'ready', 'local']
+      test: ["CMD", "mc", "ready", "local"]
       interval: 5s
       retries: 10
     restart: unless-stopped
@@ -89,7 +98,7 @@ services:
       - huly_net
 
   rekoni:
-    image: hardcoreeng/rekoni-service:${HULY_VERSION}
+    image: haiodo/rekoni-service:${HULY_VERSION}
     environment:
       - SECRET=${SECRET}
     deploy:
@@ -101,7 +110,7 @@ services:
       - huly_net
 
   transactor:
-    image: hardcoreeng/transactor:${HULY_VERSION}
+    image: haiodo/transactor:${HULY_VERSION}
     environment:
       - SERVER_PORT=3333
       - SERVER_SECRET=${SECRET}
@@ -118,7 +127,7 @@ services:
       - huly_net
 
   collaborator:
-    image: hardcoreeng/collaborator:${HULY_VERSION}
+    image: haiodo/collaborator:${HULY_VERSION}
     environment:
       - COLLABORATOR_PORT=3078
       - SECRET=${SECRET}
@@ -130,7 +139,7 @@ services:
       - huly_net
 
   account:
-    image: hardcoreeng/account:${HULY_VERSION}
+    image: haiodo/account:${HULY_VERSION}
     environment:
       - SERVER_PORT=3000
       - SERVER_SECRET=${SECRET}
@@ -138,7 +147,8 @@ services:
       - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
       - STORAGE_CONFIG=minio|minio?accessKey=minioadmin&secretKey=minioadmin
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
-      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/stats
+      - STATS_URL=http://stats:4900
+      - STATS_API=http${SECURE:+s}://${HOST_ADDRESS}/_stats
       - MODEL_ENABLED=*
       - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_accounts
       - ACCOUNT_PORT=3000
@@ -148,7 +158,7 @@ services:
       - huly_net
 
   workspace:
-    image: hardcoreeng/workspace:${HULY_VERSION}
+    image: haiodo/workspace:${HULY_VERSION}
     environment:
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
@@ -164,7 +174,7 @@ services:
       - huly_net
 
   front:
-    image: hardcoreeng/front:${HULY_VERSION}
+    image: haiodo/front:${HULY_VERSION}
     environment:
       - SERVER_PORT=8080
       - SERVER_SECRET=${SECRET}
@@ -184,12 +194,13 @@ services:
       - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
       - LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
       - DESKTOP_UPDATES_CHANNEL=${DESKTOP_CHANNEL}
+      - PULSE_URL=ws${SECURE:+s}://${HOST_ADDRESS}/_ws
     restart: unless-stopped
     networks:
       - huly_net
 
   fulltext:
-    image: hardcoreeng/fulltext:${HULY_VERSION}
+    image: haiodo/fulltext:${HULY_VERSION}
     environment:
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
@@ -205,7 +216,7 @@ services:
       - huly_net
 
   stats:
-    image: hardcoreeng/stats:${HULY_VERSION}
+    image: haiodo/stats:${HULY_VERSION}
     environment:
       - PORT=4900
       - SERVER_SECRET=${SECRET}
@@ -213,20 +224,70 @@ services:
     networks:
       - huly_net
 
-  kvs:
-    image: hardcoreeng/hulykvs:${HULY_VERSION}
+  rating:
+    image: haiodo/rating:${HULY_VERSION}
+    extra_hosts:
+      - "huly.local:host-gateway"
+    links:
+      - cockroach
+      - minio
+      - account
+      - stats
     depends_on:
-      cockroach:
+      redpanda:
         condition: service_started
-    ports:
-      - 8094:8094
     environment:
-      - HULY_DB_CONNECTION=${CR_DB_URL}
-      - HULY_TOKEN_SECRET=${SECRET}
+      - QUEUE_CONFIG=redpanda:9092
+      - SERVER_SECRET=${SECRET}
+      - STATS_URL=http://stats:4900
+      - DB_URL=${CR_DB_URL}
+      - STORAGE_CONFIG=${STORAGE_CONFIG}
+      - ACCOUNTS_URL=http://account:3000
+      - COMMUNICATION_TIME_LOGGING_ENABLED=true
+      - COMMUNICATION_API_ENABLED=false
     restart: unless-stopped
     networks:
       - huly_net
-      
+  redis:
+    image: redis:8.0.2-alpine3.21
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+    networks:
+      - huly_net
+  hulypulse:
+    image: haiodo/hulypulse:${HULY_VERSION}
+    depends_on:
+      redis:
+        condition: service_started
+    ports:
+      - 8099:8099
+    environment:
+      - HULY_TOKEN_SECRET=${SECRET}
+      - HULY_REDIS_URLS=redis://redis:6379
+      - HULY_BIND_PORT=8099
+      - HULY_REDIS_MODE=direct
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+  process-service:
+    image: haiodo/process
+    extra_hosts:
+      - "huly.local:host-gateway"
+    depends_on:
+      redpanda:
+        condition: service_started
+      account:
+        condition: service_started
+    environment:
+      - SECRET=secret
+      - ACCOUNTS_URL=http://huly.local:3000
+      - QUEUE_CONFIG=redpanda:9092
+      - QUEUE_REGION=cockroach
+    restart: unless-stopped
+    networks:
+      - huly_net
 volumes:
   # These named volumes are used when custom volume paths are not specified
   # If VOLUME_*_PATH variables are set, these volumes will be ignored

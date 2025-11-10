@@ -106,7 +106,7 @@ Add the Gmail service to your `docker-compose.yaml`:
 
 ```yaml
 gmail:
-  image: 'hardcoreeng/gmail'
+  image: 'haiodo/gmail'
   container_name: gmail
   depends_on:
     account:
