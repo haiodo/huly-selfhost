@@ -194,7 +194,7 @@ services:
       - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
       - LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
       - DESKTOP_UPDATES_CHANNEL=${DESKTOP_CHANNEL}
-      - PULSE_URL=ws${SECURE:+s}://${HOST_ADDRESS}/_ws
+      - PULSE_URL=ws${SECURE:+s}://${HOST_ADDRESS}/_pulse
     restart: unless-stopped
     networks:
       - huly_net
