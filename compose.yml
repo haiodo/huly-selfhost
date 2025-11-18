@@ -33,7 +33,7 @@ services:
       - huly_net
 
   redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:v24.3.6
+    image: docker.redpanda.com/redpandadata/redpanda:v25.2.11
     command:
       - redpanda
       - start
@@ -44,7 +44,6 @@ services:
       - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
       - --rpc-addr redpanda:33145
       - --advertise-rpc-addr redpanda:33145
-      - --mode dev-container
       - --smp 1
       - --default-log-level=info
     volumes:
@@ -153,6 +152,7 @@ services:
     environment:
       - SERVER_PORT=3000
       - SERVER_SECRET=${SECRET}
+      - ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS}
       - DB_URL=${CR_DB_URL}
       - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
@@ -292,8 +292,6 @@ services:
       - huly_net
   redis:
     image: redis:8.0.2-alpine3.21
-    ports:
-      - 6380:6379
     restart: unless-stopped
     networks:
       - huly_net
@@ -303,11 +301,11 @@ services:
       redis:
         condition: service_started
     ports:
-      - 8098:8099
+      - 8098:8098
     environment:
       - HULY_TOKEN_SECRET=${SECRET}
       - HULY_REDIS_URLS=redis://redis:6379
-      - HULY_BIND_PORT=8099
+      - HULY_BIND_PORT=8098
       - HULY_REDIS_MODE=direct
     restart: unless-stopped
     networks:
