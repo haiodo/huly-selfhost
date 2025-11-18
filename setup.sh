@@ -34,8 +34,7 @@ if [ "$RESET_VOLUMES" == true ]; then
     sed -i \
         -e '/^VOLUME_ELASTIC_PATH=/s|=.*|=|' \
         -e '/^VOLUME_FILES_PATH=/s|=.*|=|' \
-        -e '/^VOLUME_CR_DATA_PATH=/s|=.*|=|' \
-        -e '/^VOLUME_CR_CERTS_PATH=/s|=.*|=|' \
+        -e '/^VOLUME_POSTGRES_DATA_PATH=/s|=.*|=|' \
         -e '/^VOLUME_REDPANDA_PATH=/s|=.*|=|' \
         "$CONFIG_FILE"
     exit 0
@@ -135,30 +134,17 @@ echo -e "\n\033[1;34mDocker Volume Configuration:\033[0m"
         _VOLUME_FILES_PATH="${input:-${VOLUME_FILES_PATH}}"
     fi
 
-    # Cockroach data volume configuration
-    if [[ -n "$VOLUME_CR_DATA_PATH" ]]; then
-        current_cr_data="custom: $VOLUME_CR_DATA_PATH"
+    # PostgreSQL data volume configuration
+    if [[ -n "$VOLUME_POSTGRES_DATA_PATH" ]]; then
+        current_postgres_data="custom: $VOLUME_POSTGRES_DATA_PATH"
     else
-        current_cr_data="default Docker volume"
+        current_postgres_data="default Docker volume"
     fi
-    read -p "Enter custom path for CR data volume [current: ${current_cr_data}]: " input
+    read -p "Enter custom path for PostgreSQL data volume [current: ${current_postgres_data}]: " input
     if [[ "$input" == "default" ]]; then
-        _VOLUME_CR_DATA_PATH=""
+        _VOLUME_POSTGRES_DATA_PATH=""
     else
-        _VOLUME_CR_DATA_PATH="${input:-${VOLUME_CR_DATA_PATH}}"
-    fi
-
-    # Cockroach certs volume configuration
-    if [[ -n "$VOLUME_CR_CERTS_PATH" ]]; then
-        current_cr_certs="custom: $VOLUME_CR_CERTS_PATH"
-    else
-        current_cr_certs="default Docker volume"
-    fi
-    read -p "Enter custom path for CR certs volume [current: ${current_cr_certs}]: " input
-    if [[ "$input" == "default" ]]; then
-        _VOLUME_CR_CERTS_PATH=""
-    else
-        _VOLUME_CR_CERTS_PATH="${input:-${VOLUME_CR_CERTS_PATH}}"
+        _VOLUME_POSTGRES_DATA_PATH="${input:-${VOLUME_POSTGRES_DATA_PATH}}"
     fi
 
     # Redpanda volume configuration
@@ -182,9 +168,9 @@ else
   echo "Run this script with --secret to generate a new secret."
 fi
 
-if [ ! -f .cr.secret ]; then
-  openssl rand -hex 32 > .cr.secret
-  echo "Secret generated and stored in .cr.secret"
+if [ ! -f .postgres.secret ]; then
+  openssl rand -hex 32 > .postgres.secret
+  echo "Secret generated and stored in .postgres.secret"
 fi
 
 if [ ! -f .rp.secret ]; then
@@ -199,16 +185,15 @@ export HTTP_BIND=$HTTP_BIND
 export TITLE=${TITLE:-Huly}
 export DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
 export LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
-export CR_DATABASE=${CR_DATABASE:-defaultdb}
-export CR_USERNAME=${CR_USERNAME:-selfhost}
+export POSTGRES_DB=${POSTGRES_DB:-huly}
+export POSTGRES_USER=${POSTGRES_USER:-huly}
 export REDPANDA_ADMIN_USER=${REDPANDA_ADMIN_USER:-superadmin}
 export VOLUME_ELASTIC_PATH=$_VOLUME_ELASTIC_PATH
 export VOLUME_FILES_PATH=$_VOLUME_FILES_PATH
-export VOLUME_CR_DATA_PATH=$_VOLUME_CR_DATA_PATH
-export VOLUME_CR_CERTS_PATH=$_VOLUME_CR_CERTS_PATH
+export VOLUME_POSTGRES_DATA_PATH=$_VOLUME_POSTGRES_DATA_PATH
 export VOLUME_REDPANDA_PATH=$_VOLUME_REDPANDA_PATH
 export HULY_SECRET=$(cat .huly.secret)
-export COCKROACH_SECRET=$(cat .cr.secret)
+export POSTGRES_SECRET=$(cat .postgres.secret)
 export REDPANDA_SECRET=$(cat .rp.secret)
 
 envsubst < .template.huly.conf > $CONFIG_FILE
@@ -226,8 +211,7 @@ else
 fi
 echo -e "Elasticsearch Volume: \033[1;32m${_VOLUME_ELASTIC_PATH:-Docker named volume}\033[0m"
 echo -e "Files Volume: \033[1;32m${_VOLUME_FILES_PATH:-Docker named volume}\033[0m"
-echo -e "CockroachDB Volume: \033[1;32m${_VOLUME_CR_DATA_PATH:-Docker named volume}\033[0m"
-echo -e "CockroachDB Certs Volume: \033[1;32m${_VOLUME_CR_CERTS_PATH:-Docker named volume}\033[0m"
+echo -e "PostgreSQL Volume: \033[1;32m${_VOLUME_POSTGRES_DATA_PATH:-Docker named volume}\033[0m"
 echo -e "Redpanda Volume: \033[1;32m${_VOLUME_REDPANDA_PATH:-Docker named volume}\033[0m"
 
 read -p "Do you want to run 'docker compose up -d' now to start Huly? (Y/n): " RUN_DOCKER

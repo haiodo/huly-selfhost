@@ -1,9 +1,9 @@
 name: ${DOCKER_NAME}
 services:
   nginx:
-    image: "nginx:1.21.3"
+    image: 'nginx:1.21.3'
     ports:
-      - "${HTTP_BIND}:${HTTP_PORT}:80"
+      - '${HTTP_BIND}:${HTTP_PORT}:80'
     volumes:
       - ./.huly.nginx:/etc/nginx/conf.d/default.conf
     restart: unless-stopped
@@ -15,21 +15,19 @@ services:
     networks:
       - huly_net
 
-  cockroach:
-    image: cockroachdb/cockroach:latest-v24.2
-    command: start-single-node --accept-sql-without-tls
+  postgres:
+    image: postgres:18.1
     environment:
-      - COCKROACH_DATABASE=${CR_DATABASE}
-      - COCKROACH_USER=${CR_USERNAME}
-      - COCKROACH_PASSWORD=${CR_USER_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - ${VOLUME_CR_DATA_PATH:-cr_data}:/cockroach/cockroach-data
-      - ${VOLUME_CR_CERTS_PATH:-cr_certs}:/cockroach/certs
+      - ${VOLUME_POSTGRES_DATA_PATH:-postgres_data}:/var/lib/postgresql
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/_status/healthz"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
     restart: unless-stopped
     networks:
       - huly_net
@@ -57,14 +55,14 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "rpk",
-          "cluster",
-          "info",
-          "-X",
-          "user=${REDPANDA_ADMIN_USER}",
-          "-X",
-          "pass=${REDPANDA_ADMIN_PWD}",
+          'CMD',
+          'rpk',
+          'cluster',
+          'info',
+          '-X',
+          'user=${REDPANDA_ADMIN_USER}',
+          '-X',
+          'pass=${REDPANDA_ADMIN_PWD}',
         ]
       interval: 10s
       timeout: 5s
@@ -73,12 +71,12 @@ services:
       - huly_net
 
   minio:
-    image: "minio/minio"
+    image: 'minio/minio'
     command: server /data --address ":9000" --console-address ":9001"
     volumes:
       - ${VOLUME_FILES_PATH:-files}:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ['CMD', 'mc', 'ready', 'local']
       interval: 5s
       retries: 10
     restart: unless-stopped
@@ -86,7 +84,7 @@ services:
       - huly_net
 
   elastic:
-    image: "elasticsearch:7.14.2"
+    image: 'elasticsearch:7.14.2'
     command: |
       /bin/sh -c "./bin/elasticsearch-plugin list | grep -q ingest-attachment || yes | ./bin/elasticsearch-plugin install --silent ingest-attachment;
       /usr/local/bin/docker-entrypoint.sh eswrapper"
@@ -151,7 +149,7 @@ services:
   account:
     image: haiodo/account:${HULY_VERSION}
     links:
-      - cockroach
+      - postgres
     environment:
       - SERVER_PORT=3000
       - SERVER_SECRET=${SECRET}
@@ -223,7 +221,7 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-      cockroach:
+      postgres:
         condition: service_started
       stats:
         condition: service_started
@@ -271,9 +269,9 @@ services:
   rating:
     image: haiodo/rating:${HULY_VERSION}
     extra_hosts:
-      - "huly.local:host-gateway"
+      - 'huly.local:host-gateway'
     links:
-      - cockroach
+      - postgres
       - minio
       - account
       - stats
@@ -318,7 +316,7 @@ services:
   process-service:
     image: haiodo/process:${HULY_VERSION}
     extra_hosts:
-      - "huly.local:host-gateway"
+      - 'huly.local:host-gateway'
     depends_on:
       redpanda:
         condition: service_started
@@ -337,7 +335,7 @@ services:
     extra_hosts:
       - 'huly.local:host-gateway'
     environment:
-#      - STREAM_ENDPOINT_URL=s3://minio
+      #      - STREAM_ENDPOINT_URL=s3://minio
       - STREAM_ENDPOINT_URL=datalake://datalake:4030
       - STREAM_INSECURE=true
       - STREAM_SERVER_SECRET=${SECRET}
@@ -401,8 +399,7 @@ volumes:
   # If VOLUME_*_PATH variables are set, these volumes will be ignored
   elastic:
   files:
-  cr_data:
-  cr_certs:
+  postgres_data:
   redpanda:
 
 networks:
